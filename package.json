@@ -1,0 +1,21 @@
+{
+  "name": "websockets-chat-server",
+  "version": "0.0.0",
+  "description": "websockets-chat-server hw",
+  "main": "server.js",
+  "scripts": {
+    "start": "node ./src/server.js",
+    "pretest": "eslint ./src --fix",
+    "test": "echo \"Tests complete\""
+  },
+  "author": "Danielle Carmi",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^4.5.0",
+    "eslint-config-airbnb": "^15.1.0",
+    "eslint-plugin-import": "^2.7.0"
+  },
+  "dependencies": {
+    "socket.io": "^2.0.3"
+  }
+}

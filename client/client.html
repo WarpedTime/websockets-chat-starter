@@ -1,32 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- import the websocket client library. You can code websockets from scratch
-         but we will just import a library. In this case we are using socket.io which is 
-         one of the most popular and feature rich websocket libraries.
-         
-         You can point the src for the script to any host online, but
-         by default the socket.io nodejs library will host the client library
-         online at your node.js address under /socket.io/socket.io.js 
-         You can disable that on the server if desired
-    -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.34/browser.min.js"></script>
-	<style>
-		textarea {
-			display: block;
-			background-color: #EEEEEE;
-		}
-	</style>
+  <script src="/socket.io/socket.io.js"></script>  
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.34/browser.min.js"></script>
+  <style>
+  	textarea {
+  		display: block;
+  		background-color: #EEEEEE;
+  	}
+  </style>
+  
+  <script type="text/babel">
+    let currentUser = '---';
+
+    const connectSocket = (e) => {
+      const message = document.querySelector('#message');
+      const chat = document.querySelector('#chat');
+      const socket = io.connect(); //io var is created automatically by socket.io
+      
+      socket.on('connect', () => {
+        //console.log('connecting...');
+
+        //get username from input
+        let user = document.querySelector('#username').value;
+        document.querySelector('#username').value = '';
+        
+        if(!user) {
+          user = 'unknown';
+        }
+        document.querySelector('#activeUser').textContent = '['+user+'] Logged in';
+        currentUser = user;
+        
+        //send data to server
+        socket.emit('join', {name:user});
+      });
+      
+      socket.on('disconnect', (data) => {
+        console.log(`[${currentUser}] disconnected`);
+        document.querySelector('#activeUser').value = '- Disconnected -';
+        document.querySelector('#username').value = '';
+
+        //fix problem of relogin in automatically if old page left open when server starts
+        socket.disconnect();
+        socket.close();
+      }); 
+      
+      socket.on('msg', (data) => {
+        //console.log(data);
+        if(!data.PM){
+          chat.value += `\n [${data.name}] ${data.msg}`;
+        }
+        else if(data.PM && data.PM == currentUser){
+          chat.value += `\n [${data.name}] ${data.msg}`;
+        }
+      });  
+      
+      //link exit button
+      document.querySelector('#exit').onclick = ((e) =>{
+        //manual logout
+        socket.disconnect();
+        socket.close();
+        
+        document.querySelector('#send').onclick = undefined;
+      });
+      
+      //link send button
+      document.querySelector('#send').onclick = ((e) =>{
+        //send message and clear box
+        let clientMsg = document.querySelector('#message');
+        console.log('send');
+        
+        socket.emit('msgAtServer', {msg: clientMsg.value, name: currentUser});
+        clientMsg.value = '';
+      });      
+      
+      //disconnect prev user and connect new
+      const reconnect = (e) => {
+        socket.disconnect();
+        socket.close();
+        
+        connectSocket(e);
+      };
+      
+      document.querySelector('#connect').onclick = reconnect;
+ 
+    };
+
+
+    const init = () =>{
+      const connect = document.querySelector('#connect').onclick = connectSocket;
+    };
+  
+    window.onload = init;
+    
+  </script>
+  
 </head>
 <body>
 	<label for="user">Username:</label>
 	<input id="username" name="user" type="text"/>
 	<input id="connect" type='button' value='connect'/>
+	<input id="exit" type='button' value='exit'/>
 	<br/>
 	<label for="message">Message:</label>
 	<input id="message" name="message" type="text"/>
 	<input id="send" type="button" value="send" />
-	
-	<textarea id="chat" rows="20" cols="40" readonly> </textarea>
+	<div>
+      <p id="numActive" style="display: none">- Active users:[0] -</p>
+      <p id="activeUser" >- Disconnected -</p>
+      <textarea id="chat" rows="20" cols="40" readonly style="vertical-align: top"> </textarea>
+    </div>
+  
+    <p>-Extra features- </p>
+    <p>-> swap/disconnect users: users have an 'active' state on server, if name is already logged in and attempts to login with a new name, the previous one will be disconnected and new will connect. there is a manual disconnect button that logs user out.</p>
+    <p>-> get online list: messaging '@server listActive' will return a list of all active users' names (only to user who requested)</p>
+    <p>-> PM feature: messages beginning with @otherUsersName will be sent only to self and other user</p>
+  
 </body>
 </html>
